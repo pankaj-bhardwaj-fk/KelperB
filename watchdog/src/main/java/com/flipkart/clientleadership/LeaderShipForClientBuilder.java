@@ -4,6 +4,7 @@ import com.flipkart.Worker;
 import com.flipkart.dto.Mapper;
 import com.flipkart.dto.ServiceNode;
 import com.flipkart.nodeselector.NodeSelectorI;
+import com.google.common.base.Preconditions;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
@@ -62,6 +63,14 @@ public class LeaderShipForClientBuilder<T> {
     }
 
     public LeaderShipForClient<T> build() {
+        Preconditions.checkNotNull(nameSpace);
+        Preconditions.checkNotNull(connectString);
+        Preconditions.checkNotNull(serviceName);
+        Preconditions.checkNotNull(selfData);
+        Preconditions.checkNotNull(worker);
+        Preconditions.checkNotNull(nodeSelectorI);
+        Preconditions.checkNotNull(mapper);
+
         if (curatorFrameWork == null) {
             curatorFrameWork = CuratorFrameworkFactory.
                     builder().
@@ -70,6 +79,7 @@ public class LeaderShipForClientBuilder<T> {
                     retryPolicy(new ExponentialBackoffRetry(100, 100)).
                     build();
         }
+
         curatorFrameWork.start();
         return new LeaderShipForClient<T>(serviceName,
                 selfData,

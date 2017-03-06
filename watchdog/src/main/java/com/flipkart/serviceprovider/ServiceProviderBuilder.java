@@ -68,6 +68,11 @@ public class ServiceProviderBuilder<T> {
     public ServiceProvider<T> build() {
         Preconditions.checkNotNull(nameSpace);
         Preconditions.checkNotNull(connectionString);
+        Preconditions.checkNotNull(mapper);
+        Preconditions.checkNotNull(serviceNode);
+        Preconditions.checkNotNull(healthCheck);
+        Preconditions.checkNotNull(healthcheckRefreshTimeMillis);
+
         if (curatorFramework == null) {
             curatorFramework = CuratorFrameworkFactory.
                     builder().
@@ -75,8 +80,8 @@ public class ServiceProviderBuilder<T> {
                     connectString(connectionString).
                     retryPolicy(new ExponentialBackoffRetry(100, 100))
                     .build();
-            curatorFramework.start();
         }
+        curatorFramework.start();
 
         return new ServiceProvider<T>(nameSpace,
                 curatorFramework,

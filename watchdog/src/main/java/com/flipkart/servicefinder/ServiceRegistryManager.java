@@ -1,5 +1,6 @@
 package com.flipkart.servicefinder;
 
+import com.flipkart.PathUtils;
 import com.flipkart.dto.Mapper;
 import com.flipkart.dto.ServiceNode;
 import com.google.common.collect.Lists;
@@ -23,18 +24,22 @@ import java.util.concurrent.locks.ReentrantLock;
  * <p>
  * notify on update in available nodes
  */
-public class ServiceRegistryManager<T> extends Observable implements Callable<Void> {
+public class ServiceRegistryManager<T> extends Observable implements Callable<Boolean> {
 
     private static final Logger logger = LoggerFactory.getLogger(ServiceRegistryManager.class);
+
+    private boolean checkForUpdate = false;
+    private final Mapper<T> mapper;
+    private boolean shouldContinue = true;
+    private final String serviceName;
 
     private CuratorFramework curatorFramework = null;
     private Lock checkLock = new ReentrantLock();
     private Condition checkCondition = checkLock.newCondition();
-    private boolean checkForUpdate = false;
-    private final Mapper<T> mapper;
 
-    public ServiceRegistryManager(Mapper<T> mapper) {
+    public ServiceRegistryManager(Mapper<T> mapper, String serviceName) {
         this.mapper = mapper;
+        this.serviceName = serviceName;
     }
 
     public void setCuratorFramework(CuratorFramework curatorFramework) {
@@ -46,8 +51,7 @@ public class ServiceRegistryManager<T> extends Observable implements Callable<Vo
     }
 
     public void start() throws Exception {
-        //TODO path
-        final String parentPath = String.format("/%s", "abcd");
+        final String parentPath = PathUtils.getPathForParentInHandShake(serviceName);
         curatorFramework.getChildren().usingWatcher(new CuratorWatcher() {
             @Override
             public void process(WatchedEvent event) throws Exception {
@@ -69,9 +73,9 @@ public class ServiceRegistryManager<T> extends Observable implements Callable<Vo
     }
 
     @Override
-    public Void call() throws Exception {
+    public Boolean call() throws Exception {
         //Start checking for updates
-        while (true) {
+        while (shouldContinue) {
             try {
                 checkLock.lock();
                 while (!checkForUpdate) {
@@ -92,6 +96,7 @@ public class ServiceRegistryManager<T> extends Observable implements Callable<Vo
                 checkLock.unlock();
             }
         }
+        return true;
     }
 
     public void checkForUpdate() {
@@ -106,14 +111,13 @@ public class ServiceRegistryManager<T> extends Observable implements Callable<Vo
 
     private List<ServiceNode<T>> checkForUpdateOnZookeeper() {
         try {
-            //TODO path again.
-            final String parentPath = String.format("/%s", "abcd");
+            final String parentPath = PathUtils.getPathForParentInHandShake(serviceName);
 
             List<String> children = curatorFramework.getChildren().forPath(parentPath);
             List<ServiceNode<T>> nodes = Lists.newArrayListWithCapacity(children.size());
 
             for (String child : children) {
-                final String path = String.format("%s/%s", parentPath, child);
+                final String path = PathUtils.getPathForChildInHandShake(serviceName, child);
                 if (null == curatorFramework.checkExists().forPath(path)) {
                     continue;
                 }
@@ -132,6 +136,8 @@ public class ServiceRegistryManager<T> extends Observable implements Callable<Vo
     }
 
     public void stop() {
+        shouldContinue = false;
+        checkForUpdate();
         logger.debug("Stopped updater");
     }
 }

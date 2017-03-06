@@ -1,5 +1,7 @@
 package com.flipkart.servicefinder;
 
+import com.flipkart.Hack;
+import com.flipkart.PathUtils;
 import com.flipkart.clientleadership.LeaderShipForClient;
 import org.apache.curator.framework.CuratorFramework;
 import org.slf4j.Logger;
@@ -15,8 +17,9 @@ import java.util.concurrent.TimeUnit;
  * <p>
  * to manage the serviceFinder
  */
-public class ServiceFinderManager<T> {
-    private static final Logger logger = LoggerFactory.getLogger(ServiceFinderManager.class);
+@Hack(value = "Observer for leaderShipForClient ")
+public class ServiceFinder<T> {
+    private static final Logger logger = LoggerFactory.getLogger(ServiceFinder.class);
 
     private final ServiceRegistryManager<T> registryManager;
     private final long healthcheckRefreshTimeMillis;
@@ -27,17 +30,18 @@ public class ServiceFinderManager<T> {
     private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private ExecutorService service = Executors.newSingleThreadExecutor();
 
-    public ServiceFinderManager(String serviceName,
-                                CuratorFramework curatorFramework,
-                                ServiceRegistryManager<T> registryManager,
-                                long healthcheckRefreshTimeMillis,
-                                LeaderShipForClient<T> leaderShipForClient) {
+    public ServiceFinder(String serviceName,
+                         CuratorFramework curatorFramework,
+                         ServiceRegistryManager<T> registryManager,
+                         long healthcheckRefreshTimeMillis,
+                         LeaderShipForClient<T> leaderShipForClient) {
 
         this.serviceName = serviceName;
         this.curatorFramework = curatorFramework;
         this.registryManager = registryManager;
         this.healthcheckRefreshTimeMillis = healthcheckRefreshTimeMillis;
         this.leaderShipForClient = leaderShipForClient;
+
         this.registryManager.addObserver(leaderShipForClient);
     }
 
@@ -62,7 +66,8 @@ public class ServiceFinderManager<T> {
     private void startCurator() throws Exception {
         curatorFramework.blockUntilConnected();
         logger.debug("Connected to zookeeper cluster");
-        curatorFramework.newNamespaceAwareEnsurePath("/abcdef")
+        String path = PathUtils.getPathForParentInHandShake(serviceName);
+        curatorFramework.newNamespaceAwareEnsurePath(path)
                 .ensure(curatorFramework.getZookeeperClient());
         logger.debug("Service Registry Started");
     }

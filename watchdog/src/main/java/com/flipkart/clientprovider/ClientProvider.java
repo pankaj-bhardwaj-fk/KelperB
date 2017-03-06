@@ -1,5 +1,6 @@
 package com.flipkart.clientprovider;
 
+import com.flipkart.PathUtils;
 import com.flipkart.Worker;
 import com.flipkart.dto.Result;
 import com.flipkart.dto.ServiceNode;
@@ -20,6 +21,14 @@ import java.util.concurrent.TimeUnit;
  * the one which is suppose to be getting the connection
  * <p>
  * this id decoupled with the node provider from it's original host.
+ *
+ *
+ * these are provider's node for final leaderElection.
+ *
+ * path
+ * /namespace/service-clientprovider/hash
+ *
+ * eg:- /namespace/shard-x-clientprovider/hash
  */
 public class ClientProvider<T> {
     private static final Logger logger = LoggerFactory.getLogger(ClientProvider.class);
@@ -54,47 +63,61 @@ public class ClientProvider<T> {
 
         @Override
         public void run() {
-
-            String path = null;
+            String path = PathUtils.getPathForParentInLeaderShipElection(serviceName);
             try {
                 if (curatorFramework.checkExists().forPath(path) != null) {
-                    update();
+                    update(path);
                 }
             } catch (Exception e) {
                 logger.error("Something went wrong in your leaderShipClass ", e);
             }
         }
 
-        private void update() throws Exception {
-            String path = String.format("/%s/%s", serviceName, serviceNode.getRepresentation());
+        private void update(String path) throws Exception {
             List<String> children = curatorFramework.getChildren().forPath(path);
-            String shortestChild = getShortestChild(children);
-            if (shortestChild != null && previousChild != shortestChild) {
+            String leaderNode = getLeaderNode(children);
+            if (leaderNode != null && previousChild != leaderNode) {
                 // new child in the town.
-                path = String.format("/%s/%s/%s", serviceName, serviceNode.getRepresentation(), shortestChild);
+                path = PathUtils.getPathForChildInLeaderShipElection(serviceName, String.valueOf(serviceNode.hashCode()));
                 byte[] data = curatorFramework.getData().forPath(path);
-                previousChild = shortestChild;
+                previousChild = leaderNode;
                 logger.info("Get the child leader with {}", new String(data));
-                // start tcp server port.
+                // start underlying worker(in my case tcp ).
                 worker.setData();
                 Result result = worker.doWork();
-                //TODO no work as server has to be HA.
                 if (result == Result.SUCCESSFUL) {
-                    // do nothing.
-                    logger.info("Successful as a server for host {} port {}", );
+                    logger.info("Successful as a server for host {} port {}",
+                            serviceNode.getHost(), serviceNode.getPort());
                 } else {
-                    logger.error("Failed as a server for host {} and port {} and result Type", , result);
-                    //
+                    logger.error("Failed as a server for host {} and port {} and result Type {}",
+                            serviceNode.getHost(), serviceNode.getPort(), result);
                 }
             } else {
-                logger.error("Something went wrong {}", shortestChild);
+                logger.error("Something went wrong {}", leaderNode);
             }
         }
 
-        //TODO get shortest child based on child lexography.
-        private String getShortestChild(List<String> children) {
-            if (!children.isEmpty())
-                return children.get(0);
+        /**
+         * sequential nodes are of named string type with value of an integer.
+         *
+         * @param nodes
+         * @return
+         */
+        private String getLeaderNode(List<String> nodes) {
+            if (!nodes.isEmpty()) {
+                String leaderNode = null;
+                for (String node : nodes) {
+                    if (node == null) leaderNode = node;
+                    else {
+                        int val = Integer.parseInt(node);
+                        int leaderValue = Integer.parseInt(leaderNode);
+                        if (val < leaderValue) {
+                            leaderNode = node;
+                        }
+                    }
+                }
+                return leaderNode;
+            }
             return null;
         }
     }

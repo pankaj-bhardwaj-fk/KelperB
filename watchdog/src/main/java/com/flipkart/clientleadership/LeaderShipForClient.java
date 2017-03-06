@@ -1,6 +1,7 @@
 package com.flipkart.clientleadership;
 
 import com.flipkart.Hack;
+import com.flipkart.PathUtils;
 import com.flipkart.Worker;
 import com.flipkart.dto.Mapper;
 import com.flipkart.dto.Result;
@@ -104,8 +105,7 @@ public class LeaderShipForClient<T> implements Observer {
         }
 
         public void start(String serviceName, ServiceNode<T> node, ServiceNode<T> selfNode) throws Exception {
-            //TODO have to look for the path
-            String path = String.format("/%s/%s", serviceName, node.getRepresentation());
+            String path = PathUtils.getPathForChildInLeaderShipElection(serviceName, String.valueOf(node.hashCode()));
             if (curatorFramework.checkExists().forPath(path) == null) {
                 createPath(path, selfNode);
             }
@@ -118,12 +118,11 @@ public class LeaderShipForClient<T> implements Observer {
         }
 
         private boolean doesGotLeaderShip(byte[] selfData, ServiceNode<T> node) throws Exception {
-            //TODO path
-            String path = String.format("/%s/%s", serviceName, node.getRepresentation());
+            String path = PathUtils.getPathForParentInLeaderShipElection(serviceName);
             List<String> children = curatorFramework.getChildren().forPath(path);
+            logger.info("Child for the current node {}", children.toArray());
             for (String child : children) {
-                //TODO path
-                String childPath = null;
+                String childPath = PathUtils.getPathForChildInLeaderShipElection(serviceName, child);
                 byte[] data = curatorFramework.getData().forPath(childPath);
                 if (byteDataEquals(data, selfData)) {
                     return true;

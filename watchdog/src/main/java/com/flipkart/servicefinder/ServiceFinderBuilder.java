@@ -1,5 +1,7 @@
 package com.flipkart.servicefinder;
 
+import com.flipkart.clientleadership.LeaderShipForClient;
+import com.google.common.base.Preconditions;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
@@ -10,10 +12,11 @@ import org.apache.curator.retry.ExponentialBackoffRetry;
 public class ServiceFinderBuilder<T> {
     private String serviceName;
     private CuratorFramework curatorFramework;
-    private int healthcheckRefreshTimeMillis;
+    private long healthcheckRefreshTimeMillis;
     private String nameSpace;
     private String connectString;
     private ServiceRegistryManager<T> serviceRegistryManager;
+    private LeaderShipForClient<T> leaderShipForClient;
 
     public ServiceFinderBuilder<T> withNameSpace(String nameSpace) {
         this.nameSpace = nameSpace;
@@ -45,7 +48,19 @@ public class ServiceFinderBuilder<T> {
         return this;
     }
 
-    public ServiceFinderManager<T> build() {
+    public ServiceFinderBuilder<T> withLeaderShipForClient(LeaderShipForClient<T> leaderShipForClient) {
+        this.leaderShipForClient = leaderShipForClient;
+        return this;
+    }
+
+    public ServiceFinder<T> build() {
+        Preconditions.checkNotNull(serviceRegistryManager);
+        Preconditions.checkNotNull(serviceName);
+        Preconditions.checkNotNull(leaderShipForClient);
+        Preconditions.checkNotNull(healthcheckRefreshTimeMillis);
+        Preconditions.checkNotNull(connectString);
+        Preconditions.checkNotNull(nameSpace);
+
         if (curatorFramework == null) {
             curatorFramework = CuratorFrameworkFactory.
                     builder().
@@ -53,11 +68,13 @@ public class ServiceFinderBuilder<T> {
                     namespace(nameSpace).
                     retryPolicy(new ExponentialBackoffRetry(100, 100)).
                     build();
-            curatorFramework.start();
         }
-        return new ServiceFinderManager<T>(serviceName,
+        curatorFramework.start();
+
+        return new ServiceFinder<T>(serviceName,
                 curatorFramework,
                 serviceRegistryManager,
-                healthcheckRefreshTimeMillis, leaderShipForClient);
+                healthcheckRefreshTimeMillis,
+                leaderShipForClient);
     }
 }

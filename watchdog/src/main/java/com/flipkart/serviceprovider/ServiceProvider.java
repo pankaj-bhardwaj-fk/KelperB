@@ -1,5 +1,6 @@
 package com.flipkart.serviceprovider;
 
+import com.flipkart.PathUtils;
 import com.flipkart.dto.Mapper;
 import com.flipkart.dto.ServiceNode;
 import com.flipkart.healthchecks.HealthCheckI;
@@ -26,15 +27,18 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * <p>
  * SRP:- only to consistently update itself as provider.
  */
+
+//TODO path
 public class ServiceProvider<T> {
     private static final Logger logger = LoggerFactory.getLogger(ServiceProvider.class);
+
     private final String serviceName;
     private final CuratorFramework curatorFramework;
     private final long healthcheckRefreshTimeMillis;
     private final List<HealthCheckI> healthChecks;
     private final ServiceNode<T> serviceNode;
     private final AtomicBoolean nodeProvided = new AtomicBoolean(false);
-    private ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
+    private final ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
     private final Mapper<T> mapper;
 
     public ServiceProvider(String serviceName,
@@ -53,13 +57,24 @@ public class ServiceProvider<T> {
 
     public void start() throws Exception {
         curatorFramework.blockUntilConnected();
-        curatorFramework.newNamespaceAwareEnsurePath(String.format("/%s", serviceName)).ensure(curatorFramework.getZookeeperClient());
+        String path = PathUtils.getPathForParentInHandShake(serviceName);
+        curatorFramework.newNamespaceAwareEnsurePath(path).
+                ensure(curatorFramework.getZookeeperClient());
         logger.debug("Connected to zookeeper");
-        executorService.scheduleWithFixedDelay(new HealthChecker(healthChecks), 0, healthcheckRefreshTimeMillis, TimeUnit.MICROSECONDS);
+        executorService.scheduleWithFixedDelay(new HealthChecker(healthChecks),
+                0, healthcheckRefreshTimeMillis, TimeUnit.MILLISECONDS);
     }
 
+    /**
+     * zookeeper takes care of namespace itself.
+     * path --> in provider as /namespace/servicename/hostname
+     * aka  --> /namespace/shard-x/host---port
+     *
+     * @throws Exception
+     */
     private void updateStatus() throws Exception {
-        final String path = String.format("/%s/%s", serviceName, serviceNode.getRepresentation());
+        String path = PathUtils.getPathForChildInHandShake(serviceName, serviceNode.getRepresentation());
+        //final String path = String.format("/%s/%s", serviceName, serviceNode.getRepresentation());
         if (curatorFramework.checkExists().forPath(path) == null) {
             createPath();
         }
@@ -72,13 +87,13 @@ public class ServiceProvider<T> {
     }
 
     private void createPath() throws Exception {
-        String path = String.format("/%s/%s", serviceName, serviceNode.getRepresentation());
+        String path = PathUtils.getPathForChildInHandShake(serviceName, serviceNode.getRepresentation());
         curatorFramework.create().withMode(CreateMode.EPHEMERAL).forPath(path,
                 mapper.serializer(serviceNode).getBytes());
     }
 
     private void deletePath() throws Exception {
-        String path = String.format("/%s/%s", serviceName, serviceNode.getRepresentation());
+        String path = PathUtils.getPathForChildInHandShake(serviceName, serviceNode.getRepresentation());
         curatorFramework.delete().forPath(path);
         nodeProvided.set(false);
     }
@@ -109,8 +124,7 @@ public class ServiceProvider<T> {
                 }
             } else {
                 try {
-                    //TODO better message
-                    logger.info("Deleteing path for serviceNode {}", "a");
+                    logger.info("Deleteing path for serviceNode host {} port {}", serviceNode.getHost(), serviceNode.getPort());
                     deletePath();
                 } catch (Exception e) {
                     logger.error("Error in deletePath ", e);

@@ -2,6 +2,7 @@ package com.flipkart.clientprovider;
 
 import com.flipkart.Worker;
 import com.flipkart.dto.ServiceNode;
+import com.google.common.base.Preconditions;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
@@ -54,6 +55,13 @@ public class ClientProviderBuilder<T> {
     }
 
     public ClientProvider<T> build() {
+        Preconditions.checkNotNull(nameSpace);
+        Preconditions.checkNotNull(connectString);
+        Preconditions.checkNotNull(serviceNode);
+        Preconditions.checkNotNull(serviceName);
+        Preconditions.checkNotNull(refreshInMillis);
+        Preconditions.checkNotNull(worker);
+
         if (curatorFramework == null) {
             curatorFramework = CuratorFrameworkFactory.
                     builder().
@@ -61,6 +69,7 @@ public class ClientProviderBuilder<T> {
                     connectString(connectString).
                     retryPolicy(new ExponentialBackoffRetry(100, 100)).build();
         }
+
         curatorFramework.start();
 
         return new ClientProvider<T>(serviceNode,
