@@ -1,0 +1,63 @@
+package com.flipkart.servicefinder;
+
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.retry.ExponentialBackoffRetry;
+
+/**
+ * Created on 04/03/17 by dark magic.
+ */
+public class ServiceFinderBuilder<T> {
+    private String serviceName;
+    private CuratorFramework curatorFramework;
+    private int healthcheckRefreshTimeMillis;
+    private String nameSpace;
+    private String connectString;
+    private ServiceRegistryManager<T> serviceRegistryManager;
+
+    public ServiceFinderBuilder<T> withNameSpace(String nameSpace) {
+        this.nameSpace = nameSpace;
+        return this;
+    }
+
+    public ServiceFinderBuilder<T> withServiceName(String serviceName) {
+        this.serviceName = serviceName;
+        return this;
+    }
+
+    public ServiceFinderBuilder<T> withCuratorFrameWork(CuratorFramework curatorFrameWork) {
+        this.curatorFramework = curatorFrameWork;
+        return this;
+    }
+
+    public ServiceFinderBuilder<T> withHealthCheckRefreshTime(int healthCheckRefreshTime) {
+        this.healthcheckRefreshTimeMillis = healthCheckRefreshTime;
+        return this;
+    }
+
+    public ServiceFinderBuilder<T> withConnectString(String connectString) {
+        this.connectString = connectString;
+        return this;
+    }
+
+    public ServiceFinderBuilder<T> withServiceRegistryManager(ServiceRegistryManager<T> serviceRegistryManager) {
+        this.serviceRegistryManager = serviceRegistryManager;
+        return this;
+    }
+
+    public ServiceFinderManager<T> build() {
+        if (curatorFramework == null) {
+            curatorFramework = CuratorFrameworkFactory.
+                    builder().
+                    connectString(connectString).
+                    namespace(nameSpace).
+                    retryPolicy(new ExponentialBackoffRetry(100, 100)).
+                    build();
+            curatorFramework.start();
+        }
+        return new ServiceFinderManager<T>(serviceName,
+                curatorFramework,
+                serviceRegistryManager,
+                healthcheckRefreshTimeMillis, leaderShipForClient);
+    }
+}
