@@ -2,7 +2,7 @@ package com.flipkart.clientprovider;
 
 import com.flipkart.PathUtils;
 import com.flipkart.Worker;
-import com.flipkart.dto.Result;
+import com.flipkart.dto.ResultType;
 import com.flipkart.dto.ServiceNode;
 import org.apache.curator.framework.CuratorFramework;
 import org.slf4j.Logger;
@@ -82,15 +82,15 @@ public class ClientProvider<T> {
                 byte[] data = curatorFramework.getData().forPath(path);
                 previousChild = leaderNode;
                 logger.info("Get the child leader with {}", new String(data));
-                // start underlying worker(in my case tcp ).
-                worker.setData();
-                Result result = worker.doWork();
-                if (result == Result.SUCCESSFUL) {
+                // createPathForLeaderShip underlying worker(in my case tcp ).
+                worker.setData(leaderNode);
+                ResultType resultType = worker.doWork();
+                if (resultType == ResultType.SUCCESSFUL) {
                     logger.info("Successful as a server for host {} port {}",
                             serviceNode.getHost(), serviceNode.getPort());
                 } else {
                     logger.error("Failed as a server for host {} and port {} and result Type {}",
-                            serviceNode.getHost(), serviceNode.getPort(), result);
+                            serviceNode.getHost(), serviceNode.getPort(), resultType);
                 }
             } else {
                 logger.error("Something went wrong {}", leaderNode);
@@ -120,5 +120,10 @@ public class ClientProvider<T> {
             }
             return null;
         }
+    }
+
+    public void stop() {
+        curatorFramework.close();
+        service.shutdown();
     }
 }

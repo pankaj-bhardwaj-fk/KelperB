@@ -9,6 +9,7 @@ import static java.lang.annotation.RetentionPolicy.SOURCE;
  *
  * Annotation for Hack/dirty code
  * should have found a better way to solve this.
+ * inspired by vivekm
  */
 @Retention(value = SOURCE)
 public @interface Hack {

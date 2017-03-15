@@ -72,6 +72,7 @@ public class ServiceProviderBuilder<T> {
         Preconditions.checkNotNull(serviceNode);
         Preconditions.checkNotNull(healthCheck);
         Preconditions.checkNotNull(healthcheckRefreshTimeMillis);
+        Preconditions.checkNotNull(serviceName);
 
         if (curatorFramework == null) {
             curatorFramework = CuratorFrameworkFactory.
@@ -83,7 +84,7 @@ public class ServiceProviderBuilder<T> {
         }
         curatorFramework.start();
 
-        return new ServiceProvider<T>(nameSpace,
+        return new ServiceProvider<T>(serviceName,
                 curatorFramework,
                 healthcheckRefreshTimeMillis,
                 healthCheck,

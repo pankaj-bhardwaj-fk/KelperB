@@ -3,7 +3,7 @@ package com.flipkart.dto;
 /**
  * Created on 05/03/17 by dark magic.
  */
-public enum Result {
+public enum ResultType {
     RETRY,
     SUCCESSFUL,
     FAIL,

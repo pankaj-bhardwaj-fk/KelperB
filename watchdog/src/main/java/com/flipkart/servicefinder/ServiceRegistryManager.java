@@ -46,10 +46,6 @@ public class ServiceRegistryManager<T> extends Observable implements Callable<Bo
         this.curatorFramework = curatorFramework;
     }
 
-    protected CuratorFramework getCuratorFramework() {
-        return curatorFramework;
-    }
-
     public void start() throws Exception {
         final String parentPath = PathUtils.getPathForParentInHandShake(serviceName);
         curatorFramework.getChildren().usingWatcher(new CuratorWatcher() {
@@ -85,7 +81,7 @@ public class ServiceRegistryManager<T> extends Observable implements Callable<Bo
                 if (null != nodes) {
                     //event send.
                     notifyObservers(nodes);
-                    logger.debug("Setting nodelist of size: " + nodes.size());
+                    logger.info("Setting nodelist of size: " + nodes.size());
                 } else {
                     logger.warn("No service shards/nodes found. We are disconnected from zookeeper. Keeping old list.");
                 }

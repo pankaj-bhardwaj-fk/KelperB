@@ -25,10 +25,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Created on 03/03/17 by dark magic.
  * <p>
  * <p>
- * SRP:- only to consistently update itself as provider.
+ * SRP:- only to consistently update itself as provider of data node.
  */
 
-//TODO path
 public class ServiceProvider<T> {
     private static final Logger logger = LoggerFactory.getLogger(ServiceProvider.class);
 
@@ -73,8 +72,7 @@ public class ServiceProvider<T> {
      * @throws Exception
      */
     private void updateStatus() throws Exception {
-        String path = PathUtils.getPathForChildInHandShake(serviceName, serviceNode.getRepresentation());
-        //final String path = String.format("/%s/%s", serviceName, serviceNode.getRepresentation());
+        final String path = PathUtils.getPathForChildInHandShake(serviceName, serviceNode.getRepresentation());
         if (curatorFramework.checkExists().forPath(path) == null) {
             createPath();
         }
@@ -87,22 +85,30 @@ public class ServiceProvider<T> {
     }
 
     private void createPath() throws Exception {
-        String path = PathUtils.getPathForChildInHandShake(serviceName, serviceNode.getRepresentation());
+        final String path = PathUtils.getPathForChildInHandShake(serviceName, serviceNode.getRepresentation());
         curatorFramework.create().withMode(CreateMode.EPHEMERAL).forPath(path,
                 mapper.serializer(serviceNode).getBytes());
     }
 
     private void deletePath() throws Exception {
-        String path = PathUtils.getPathForChildInHandShake(serviceName, serviceNode.getRepresentation());
+        final String path = PathUtils.getPathForChildInHandShake(serviceName, serviceNode.getRepresentation());
         curatorFramework.delete().forPath(path);
         nodeProvided.set(false);
     }
 
     public void stop() {
         curatorFramework.close();
+        executorService.shutdown();
     }
 
-    public class HealthChecker implements Runnable {
+    /**
+     * why private inner class:-
+     * because it manipulates the state of the object and it's composition does not make sense in the original class
+     * in such case we can have a seperate class but calling it private limits it's scope to this one only.
+     * <p>
+     * If further healthCheck is needed we can move it away.
+     */
+    private class HealthChecker implements Runnable {
         private final List<HealthCheckI> healthCheckIList;
 
         public HealthChecker(List<HealthCheckI> healthCheckIList) {

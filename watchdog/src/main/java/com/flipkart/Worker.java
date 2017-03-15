@@ -1,6 +1,6 @@
 package com.flipkart;
 
-import com.flipkart.dto.Result;
+import com.flipkart.dto.ResultType;
 
 /**
  * Created on 05/03/17 by dark magic.
@@ -8,5 +8,7 @@ import com.flipkart.dto.Result;
 public interface Worker {
     public void setData(Object... data);
 
-    public Result doWork();
+    public ResultType doWork();
+
+    void releaseResources();
 }

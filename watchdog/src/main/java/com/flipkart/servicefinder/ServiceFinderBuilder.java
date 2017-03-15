@@ -60,6 +60,7 @@ public class ServiceFinderBuilder<T> {
         Preconditions.checkNotNull(healthcheckRefreshTimeMillis);
         Preconditions.checkNotNull(connectString);
         Preconditions.checkNotNull(nameSpace);
+        Preconditions.checkNotNull(leaderShipForClient);
 
         if (curatorFramework == null) {
             curatorFramework = CuratorFrameworkFactory.

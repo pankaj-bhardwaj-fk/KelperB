@@ -10,17 +10,12 @@
     <version>1.0-SNAPSHOT</version>
 
 
-    <dependencyManagement>
-        <dependencies>
-
-        </dependencies>
-    </dependencyManagement>
     <build>
 
     </build>
     <modules>
-
         <module>watchdog</module>
         <module>transfer</module>
+        <module>suite</module>
     </modules>
 </project>

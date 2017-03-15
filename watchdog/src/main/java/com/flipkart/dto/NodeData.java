@@ -2,12 +2,12 @@ package com.flipkart.dto;
 
 /**
  * Created on 03/03/17 by dark magic.
+ * Object to save with ServiceNode
  */
 public class NodeData {
     private final String host;
     private final String port;
     private final String hash;
-
 
     public NodeData(String host, String port, String hash) {
         this.host = host;
